@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webserver
+  namespace: assignment
+  labels:
+    service: webserver
+    version: v1
+spec:
+  #replicas: 2
+  progressDeadlineSeconds: 3600
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 5%
+  selector:
+    matchLabels:
+      service: webserver
+      version: v1
+  template:
+    metadata:
+      labels:
+        service: webserver
+        version: v1
+    spec:
+      containers:
+        - name: webserver
+          image: chandra37933/webserver:v2
+          imagePullPolicy: Always
+          ports:
+            - name: service-port
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: service-port
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            timeoutSeconds: 20
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            timeoutSeconds: 20
+          resources:
+            limits:
+              memory: 1Gi
+              cpu: 1
+            requests:
+              memory: 500Mi
+              cpu: 500m
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 30"]
+          terminationMessagePath: /termination-log
+          terminationMessagePolicy: File
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: webserver
+  namespace: assignment
+spec:
+  selector:
+    service: webserver
+  ports:
+    - name: http
+      port: 80
+      targetPort: service-port
+  type: LoadBalancer
+  externalIPs:
+  - 192.168.64.3 # Replace with Minikube IP ( get by running with minikube up)
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: webserver
+  namespace: assignment
+spec:
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 60
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: webserver
