@@ -71,7 +71,7 @@ Check the status of the pods using `kubectl get pods -n assignment`
 
 once the status is running
 
-open http://<minikubeip> in the webbrowser
+open `http://<minikubeip>` in the webbrowser
 
 
 Note: I have added Ingress for the deployment, but minikube is not supporting ingress.. hence kept it as place holder.
